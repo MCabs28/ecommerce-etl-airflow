@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+
+# Project-specific
+
+# macOS
+.DS_Store
+
+# Local logs
+logs/*.log
+
+# Local data files (optional)
+# Uncomment if you don't want to commit sample datasets
+# data/raw/*
+# data/processed/*
