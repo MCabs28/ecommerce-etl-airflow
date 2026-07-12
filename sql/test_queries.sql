@@ -152,5 +152,157 @@ GROUP BY
  HAVING COUNT(o.order_id) > 1
 ORDER BY total_orders DESC;
 
+--Classify every product based on its price.
+SELECT
+	product_name, price,
+	CASE
+	    WHEN price >= 20000 THEN 'Premium'
+	    WHEN price >= 10000 THEN 'Mid-range'
+	    ELSE 'Budget'
+	END AS  price_category
+FROM products
+ORDER BY price DESC;
+
+--Classify customers based on their total spending.
+SELECT 
+	c.first_name || ' ' || c.last_name AS customer_name,
+	COALESCE(SUM(o.total_amount),0) AS total_spent,
+	CASE
+	    WHEN COALESCE(SUM(o.total_amount), 0) >= 50000 THEN 'VIP'
+	    WHEN COALESCE(SUM(o.total_amount), 0) >= 10000 THEN 'Regular'
+	    ELSE 'New'
+	END AS customer_type
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, customer_name
+ORDER BY total_spent DESC;
+
+--Check Orders Table Schema
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_name = 'orders';
+--Show all orders placed today.
+ SELECT * FROM orders WHERE DATE(order_date) = CURRENT_DATE; 
+--CAST(order_date AS DATE)
+SELECT * FROM orders WHERE order_date::DATE = CURRENT_DATE; 
+
+--How many orders were placed in each month?
+SELECT
+	EXTRACT(MONTH FROM order_date) AS month,
+	COUNT(order_id) AS total_orders
+FROM orders
+GROUP BY month
+ORDER BY month ASC;
+
+--How much revenue did we generate each month?
+SELECT
+    DATE_TRUNC('month', order_date) AS month,
+    SUM(total_amount) AS total_revenue
+FROM orders
+WHERE order_status IN ('Delivered', 'Shipped')
+GROUP BY month
+ORDER BY month;
+
+--Which day of the week receives the most orders?
+SELECT 
+	EXTRACT(DOW FROM order_date) AS day_of_week,
+	COUNT(order_id) AS total_orders
+FROM orders
+GROUP BY day_of_week
+ORDER BY total_orders DESC;
+
+
+--Which day of the week receives the most orders? with (CASE)
+SELECT 
+	CASE 
+		WHEN EXTRACT(DOW FROM order_date) = 1 THEN 'Monday'
+		WHEN EXTRACT(DOW FROM order_date) = 2 THEN 'Tuesday'
+		WHEN EXTRACT(DOW FROM order_date) = 3 THEN 'Wednesday'
+		WHEN EXTRACT(DOW FROM order_date) = 4 THEN 'Thursday'
+		WHEN EXTRACT(DOW FROM order_date) = 5 THEN 'Friday'
+		WHEN EXTRACT(DOW FROM order_date) = 6 THEN 'Saturday'
+		ELSE 'Sunday'
+	END AS day_of_week,
+	COUNT(order_id) AS total_orders
+FROM orders
+GROUP BY day_of_week
+ORDER BY total_orders DESC;
+
+
+--Which day of the week receives the most orders? with (TRIM AND TO_CHAR)
+SELECT
+    TRIM(TO_CHAR(order_date, 'Day')) AS day_name,
+    COUNT(*) AS total_orders
+FROM orders
+GROUP BY day_name
+ORDER BY total_orders DESC;
+
+
+--Which day of the week receives the orders? with (CASE AND GROUP BY DAY OF WEEK)
+SELECT
+    CASE
+        WHEN EXTRACT(DOW FROM order_date) = 1 THEN 1
+        WHEN EXTRACT(DOW FROM order_date) = 2 THEN 2
+        WHEN EXTRACT(DOW FROM order_date) = 3 THEN 3
+        WHEN EXTRACT(DOW FROM order_date) = 4 THEN 4
+        WHEN EXTRACT(DOW FROM order_date) = 5 THEN 5
+        WHEN EXTRACT(DOW FROM order_date) = 6 THEN 6
+        ELSE 7
+    END AS day_order,
+    CASE
+        WHEN EXTRACT(DOW FROM order_date) = 1 THEN 'Monday'
+        WHEN EXTRACT(DOW FROM order_date) = 2 THEN 'Tuesday'
+        WHEN EXTRACT(DOW FROM order_date) = 3 THEN 'Wednesday'
+        WHEN EXTRACT(DOW FROM order_date) = 4 THEN 'Thursday'
+        WHEN EXTRACT(DOW FROM order_date) = 5 THEN 'Friday'
+        WHEN EXTRACT(DOW FROM order_date) = 6 THEN 'Saturday'
+        ELSE 'Sunday'
+    END AS day_name,
+    COUNT(*) AS total_orders
+FROM orders
+GROUP BY day_order, day_name
+ORDER BY day_order;
+
+
+--Orders from the last 30 days:
+SELECT *
+FROM orders
+WHERE order_date >= NOW() - INTERVAL '30 days';
+
+--Orders placed yesterday:
+SELECT *
+FROM orders
+WHERE DATE(order_date) = CURRENT_DATE - INTERVAL '1 day';
+
+
+--Expected delivery date (7 days after ordering):
+SELECT
+    order_id,
+    order_date,
+    order_date + INTERVAL '7 days' AS expected_delivery
+FROM orders;
+
+--Show orders from the last 30 days.
+SELECT 
+	order_id, customer_id, order_date FROM orders
+	WHERE order_date >= NOW() - INTERVAL '30 days';
+
+--Show orders from the last 30 calendar days.
+SELECT 
+	order_id, customer_id, order_date FROM orders
+	WHERE order_date >= CURRENT_DATE - INTERVAL '30 days';
+
+--How many days have passed since the order was placed relative to today.
+SELECT
+    order_id,
+    order_date,
+    CURRENT_DATE - DATE(order_date) AS days_since_order
+FROM orders;
+
+
+
+
+
 
 
