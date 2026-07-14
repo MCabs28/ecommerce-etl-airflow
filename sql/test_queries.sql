@@ -300,9 +300,439 @@ SELECT
     CURRENT_DATE - DATE(order_date) AS days_since_order
 FROM orders;
 
+--Show me all orders that were placed yesterday.
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= CURRENT_DATE - INTERVAL '1 day'
+  AND order_date < CURRENT_DATE;
 
 
+--Exercise 1 — Orders Today
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= CURRENT_DATE
+  AND order_date < CURRENT_DATE + INTERVAL '1 day';
 
 
+--Exercise 2 — Orders Yesterday
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= CURRENT_DATE - INTERVAL '1 day'
+  AND order_date < CURRENT_DATE;
 
+--Exercise 3 — Orders Last 7 Days
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= NOW() - INTERVAL '7 days';
+
+--Exercise 4 — Orders Last 30 Days
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= NOW() - INTERVAL '30 days';
+
+--Exercise 5 — Orders This Month
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE)
+  AND order_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month';
+
+--Exercise 6 — Orders Last Month
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+  AND order_date < DATE_TRUNC('month', CURRENT_DATE);
+
+--Exercise 7 — Orders This Year
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date >= DATE_TRUNC('year', CURRENT_DATE)
+  AND order_date < DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year';
+
+--Exercise 8 — Expected Delivery (7 Days)
+SELECT
+    order_id,
+    order_date,
+    order_date + INTERVAL '7 days' AS expected_delivery
+FROM orders;
+
+--Exercise 9 — Days Since Order
+SELECT
+    order_id,
+    order_date,
+    CURRENT_DATE - DATE(order_date) AS days_since_order
+FROM orders;
+
+--Exercise 10 — Order Age (Human Readable)
+SELECT
+    order_id,
+    order_date,
+    AGE(NOW(), order_date) AS order_age
+FROM orders;
+
+--Exercise 11 — Monthly Sales Report
+SELECT
+    DATE_TRUNC('month', order_date) AS month,
+    COUNT(*) AS total_orders
+FROM orders
+GROUP BY DATE_TRUNC('month', order_date)
+ORDER BY month;
+
+--Exercise 12 — Revenue by Month
+SELECT
+    DATE_TRUNC('month', o.order_date) AS month,
+    SUM(oi.quantity * oi.price) AS revenue
+FROM orders o
+JOIN order_items oi
+ON o.order_id = oi.order_id
+GROUP BY DATE_TRUNC('month', o.order_date)
+ORDER BY month;
+
+--Exercise 13 — Orders Per Weekday
+SELECT
+    CASE
+        WHEN EXTRACT(DOW FROM order_date) = 1 THEN 'Monday'
+        WHEN EXTRACT(DOW FROM order_date) = 2 THEN 'Tuesday'
+        WHEN EXTRACT(DOW FROM order_date) = 3 THEN 'Wednesday'
+        WHEN EXTRACT(DOW FROM order_date) = 4 THEN 'Thursday'
+        WHEN EXTRACT(DOW FROM order_date) = 5 THEN 'Friday'
+        WHEN EXTRACT(DOW FROM order_date) = 6 THEN 'Saturday'
+        ELSE 'Sunday'
+    END AS weekday,
+    COUNT(*) AS total_orders
+FROM orders
+GROUP BY weekday
+ORDER BY
+    CASE weekday
+        WHEN 'Monday' THEN 1
+        WHEN 'Tuesday' THEN 2
+        WHEN 'Wednesday' THEN 3
+        WHEN 'Thursday' THEN 4
+        WHEN 'Friday' THEN 5
+        WHEN 'Saturday' THEN 6
+        ELSE 7
+    END;
+
+--Exercise 14 — Orders Older Than 90 Days
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM orders
+WHERE order_date < CURRENT_DATE - INTERVAL '90 days';
+
+--Exercise 15 — Customers Without Orders in the Last 90 Days
+SELECT
+    c.customer_id,
+    c.first_name,
+    c.last_name
+FROM customers c
+LEFT JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY
+    c.customer_id,
+    c.first_name,
+    c.last_name
+HAVING MAX(o.order_date) < CURRENT_DATE - INTERVAL '90 days'
+    OR MAX(o.order_date) IS NULL;
+
+--Production Patterns to Memorize
+-- Today
+WHERE order_date >= CURRENT_DATE
+AND order_date < CURRENT_DATE + INTERVAL '1 day'
+-- Yesterday
+WHERE order_date >= CURRENT_DATE - INTERVAL '1 day'
+AND order_date < CURRENT_DATE
+-- Last N Days
+WHERE order_date >= NOW() - INTERVAL '30 days'
+-- This Month
+WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE)
+AND order_date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+-- Last Month
+WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+AND order_date < DATE_TRUNC('month', CURRENT_DATE)
+-- This Year
+WHERE order_date >= DATE_TRUNC('year', CURRENT_DATE)
+AND order_date < DATE_TRUNC('year', CURRENT_DATE) + INTERVAL '1 year'
+
+
+--Subquery
+SELECT
+    product_id,
+    product_name,
+    price
+FROM products
+WHERE price >
+(
+    SELECT AVG(price)
+    FROM products
+);
+
+--IN
+SELECT
+    customer_id,
+    email
+FROM customers
+WHERE customer_id IN
+(
+    SELECT DISTINCT customer_id
+    FROM orders
+    WHERE order_status = 'Delivered'
+);
+
+--Which table tells me whether a product has ever been ordered?
+SELECT
+    product_id,
+product_name,
+price
+FROM products
+WHERE product_id IN
+(
+    SELECT DISTINCT product_id
+    FROM order_items
+);
+
+--EXIST
+SELECT
+    p.product_id,
+    p.product_name,
+    p.price
+FROM products p
+WHERE EXISTS
+(
+    SELECT 1
+    FROM order_items oi
+    WHERE oi.product_id = p.product_id
+);
+
+--Which customers have never purchased anything?
+SELECT
+    c.customer_id,
+    c.first_name,
+    c.last_name
+FROM customers c
+WHERE NOT EXISTS
+(
+    SELECT 1
+    FROM orders o
+    WHERE o.customer_id = c.customer_id
+);
+
+--You need active customers.
+SELECT
+    c.customer_id,
+    c.first_name
+FROM customers c
+WHERE EXISTS
+(
+    SELECT 1
+    FROM orders o
+    WHERE o.customer_id = c.customer_id
+);
+
+--Products never sold
+SELECT
+    p.product_name
+FROM products p
+WHERE NOT EXISTS
+(
+    SELECT 1
+    FROM order_items oi
+    WHERE oi.product_id = p.product_id
+);
+
+--Scalar Subquery
+WHERE price > (
+    SELECT AVG(price)
+    FROM products
+)
+
+--Multi-row Subquery
+WHERE product_id IN (
+    SELECT DISTINCT product_id
+    FROM order_items
+)
+--EXISTS
+WHERE EXISTS (
+    SELECT 1
+    FROM order_items oi
+    WHERE oi.product_id = p.product_id
+)
+--NOT EXISTS
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM orders o
+    WHERE o.customer_id = c.customer_id
+)
+
+--Show customers who have placed more than 3 orders.
+SELECT
+    c.customer_id,
+    c.first_name,
+    c.last_name
+FROM customers c
+WHERE (
+    SELECT COUNT(*)
+    FROM orders o
+    WHERE o.customer_id = c.customer_id
+) > 3;
+
+--Calculate total spending per customer.
+WITH customer_spending AS (
+
+    SELECT
+        o.customer_id,
+        SUM(oi.quantity * oi.unit_price) AS total_spent
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    GROUP BY o.customer_id
+
+)
+SELECT *
+FROM customer_spending;
+
+--Show every customer whose total spending is greater than 10000.
+WITH customer_spending AS (
+
+    SELECT
+        o.customer_id,
+        SUM(oi.quantity * oi.unit_price) AS total_spent
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    GROUP BY o.customer_id
+
+)
+SELECT
+    customer_id,
+    total_spent
+FROM customer_spending
+WHERE total_spent > 10000;
+
+--Keep VIP customers
+WITH customer_spending AS (
+
+    SELECT
+        o.customer_id,
+        SUM(oi.quantity * oi.unit_price) AS total_spent
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    GROUP BY o.customer_id
+
+),
+vip_customers AS (
+
+    SELECT
+        customer_id,
+        total_spent
+    FROM customer_spending
+    WHERE total_spent > 1000
+)
+SELECT *
+FROM vip_customers;
+
+--Refractor Cross join
+WITH customer_spending AS (
+
+    SELECT
+        o.customer_id,
+        SUM(oi.quantity * oi.unit_price) AS total_spent
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    GROUP BY o.customer_id
+
+),
+average_spending AS (
+
+    SELECT
+        AVG(total_spent) AS avg_spent
+    FROM customer_spending
+
+)
+SELECT
+    cs.customer_id,
+    cs.total_spent
+FROM customer_spending cs
+CROSS JOIN average_spending a
+WHERE cs.total_spent > a.avg_spent;
+
+--Show customers whose total spending is greater than the average spending of all customers.
+WITH customer_spending AS (
+
+    SELECT
+        o.customer_id,
+        SUM(oi.quantity * oi.unit_price) AS total_spent
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+    GROUP BY o.customer_id
+
+),
+average_spending AS (
+
+    SELECT
+        AVG(total_spent) AS avg_spent
+    FROM customer_spending
+
+)
+SELECT
+    cs.customer_id,
+    cs.total_spent
+FROM customer_spending cs
+CROSS JOIN average_spending a
+WHERE cs.total_spent > a.avg_spent;
+
+--Recursive Query
+WITH RECURSIVE employee_tree AS (
+
+    -- Base Case
+
+    SELECT
+        employee_id,
+        employee_name,
+        manager_id
+    FROM employees
+    WHERE manager_id IS NULL
+
+    UNION ALL
+
+    -- Recursive Part
+
+    SELECT
+        e.employee_id,
+        e.employee_name,
+        e.manager_id
+    FROM employees e
+    JOIN employee_tree et
+        ON e.manager_id = et.employee_id
+
+)
+SELECT *
+FROM employee_tree;
 
