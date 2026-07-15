@@ -736,3 +736,103 @@ WITH RECURSIVE employee_tree AS (
 SELECT *
 FROM employee_tree;
 
+--MULTIPLE WITH
+WITH order_details AS (
+
+    SELECT
+        o.customer_id,
+        oi.quantity,
+        oi.unit_price
+    FROM orders o
+    JOIN order_items oi
+        ON o.order_id = oi.order_id
+
+),
+customer_spending AS (
+
+    SELECT
+        customer_id,
+        SUM(quantity * unit_price) AS total_spent
+    FROM order_details
+    GROUP BY customer_id
+
+),
+final AS (
+
+    SELECT
+        customer_id,
+        total_spent,
+        'VIP' AS customer_type
+    FROM customer_spending
+    WHERE total_spent > 1000
+
+)
+SELECT
+    customer_id,
+    total_spent,
+    customer_type
+FROM final;
+
+--Explain - Returns the execution plan without executing the query.
+EXPLAIN
+SELECT *
+FROM customers;
+
+--Explain Analyze
+EXPLAIN ANALYZE
+SELECT *
+FROM customers;
+
+--Window Functions - the customer's total spending across all their orders
+SELECT
+    order_id,
+    customer_id,
+    total_amount,
+    SUM(total_amount) OVER (
+        PARTITION BY customer_id
+    ) AS customer_total
+FROM orders;
+
+--Window Functions Order By
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    total_amount,
+    SUM(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS running_total
+FROM orders;
+
+--Get the latest orders
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    ROW_NUMBER() OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date DESC
+    ) AS row_num
+FROM orders;
+--Wrap to CTE
+WITH ranked_orders AS (
+
+    SELECT
+        order_id,
+        customer_id,
+        order_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY customer_id
+            ORDER BY order_date DESC
+        ) AS row_num
+    FROM orders
+
+)
+SELECT
+    order_id,
+    customer_id,
+    order_date
+FROM ranked_orders
+WHERE row_num = 1;
+
