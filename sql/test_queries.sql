@@ -836,3 +836,245 @@ SELECT
 FROM ranked_orders
 WHERE row_num = 1;
 
+--Rank customers by total spending.
+SELECT
+    customer_id,
+    SUM(total_amount) AS total_spent,
+    RANK() OVER (
+        ORDER BY SUM(total_amount) DESC
+    ) AS spending_rank
+FROM orders
+GROUP BY customer_id;
+
+--Dense Rank 
+SELECT
+    customer_id,
+    SUM(total_amount) AS total_spent,
+    DENSE_RANK() OVER (
+        ORDER BY SUM(total_amount) DESC
+    ) AS spending_rank
+FROM orders
+GROUP BY customer_id;
+
+--Get the previous order
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    total_amount,
+    LAG(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS previous_order
+FROM orders;
+
+--Calculate the difference
+SELECT
+    order_id,
+    customer_id,
+    total_amount,
+    total_amount -
+        LAG(total_amount) OVER (
+            PARTITION BY customer_id
+            ORDER BY order_date
+        ) AS difference
+FROM orders;
+
+--Calculates daily sales changes.
+SELECT
+    sales_date,
+    revenue,
+    revenue -
+        LAG(revenue) OVER (
+            ORDER BY sales_date
+        ) AS daily_change
+FROM daily_sales;
+
+--For each order, show the customer's next order.
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    total_amount,
+    LEAD(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS next_order_amount
+FROM orders;
+
+--Comparing current vs next
+SELECT
+    order_date,
+    total_amount,
+    LEAD(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) - total_amount AS next_difference
+FROM orders;
+
+--LAG vs LEAD together
+SELECT
+    order_date,
+    total_amount,
+    LAG(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS previous,
+    LEAD(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS next
+FROM orders;
+
+--Production DBT
+SELECT
+    customer_id,
+    order_date,
+    total_amount,
+    LAG(order_date) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS previous_purchase,
+    LEAD(order_date) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS next_purchase
+FROM orders;
+
+--the customer's first purchase amount
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    total_amount,
+    FIRST_VALUE(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS first_purchase
+FROM orders;
+
+--the customer's last purchase amount
+SELECT
+    order_id,
+    customer_id,
+    order_date,
+    total_amount,
+    LAST_VALUE(total_amount)
+    OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS last_purchase
+FROM orders;
+
+--Production dbt
+SELECT
+    customer_id,
+    order_date,
+    total_amount,
+    FIRST_VALUE(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+    ) AS first_purchase,
+    LAST_VALUE(total_amount) OVER (
+        PARTITION BY customer_id
+        ORDER BY order_date
+        ROWS BETWEEN
+            UNBOUNDED PRECEDING
+        AND
+            UNBOUNDED FOLLOWING
+    ) AS latest_purchase
+FROM orders;
+
+
+--How much revenue have we generated over the last 7 days?
+SELECT
+    sales_date,
+    revenue,
+    SUM(revenue) OVER (
+        ORDER BY sales_date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) AS rolling_7_day_sales
+FROM daily_sales
+ORDER BY sales_date;
+
+--What is the average daily revenue over the last 30 days
+SELECT
+    sales_date,
+    revenue,
+    AVG(revenue) OVER (
+        ORDER BY sales_date
+        ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+    ) AS rolling_30_day_avg
+FROM daily_sales
+ORDER BY sales_date;
+
+--How much total revenue have we earned so far this year?
+SELECT
+    sales_date,
+    revenue,
+    SUM(revenue) OVER (
+        ORDER BY sales_date
+        ROWS BETWEEN UNBOUNDED PRECEDING
+        AND CURRENT ROW
+    ) AS cumulative_revenue
+FROM daily_sales
+ORDER BY sales_date;
+
+--Compare today's revenue to yesterday's.
+SELECT
+    sales_date,
+    revenue,
+    LAG(revenue) OVER (
+        ORDER BY sales_date
+    ) AS previous_day_revenue
+FROM daily_sales
+ORDER BY sales_date;
+
+--Daily Revenue Change:Better
+SELECT
+    sales_date,
+    revenue,
+    LAG(revenue) OVER (
+        ORDER BY sales_date
+    ) AS previous_day_revenue,
+    revenue -
+    LAG(revenue) OVER (
+        ORDER BY sales_date
+    ) AS revenue_change
+FROM daily_sales
+ORDER BY sales_date;
+
+--Real dbt model
+SELECT
+    sales_date,
+    revenue,
+    -- Running total
+    SUM(revenue) OVER (
+        ORDER BY sales_date
+        ROWS BETWEEN UNBOUNDED PRECEDING
+        AND CURRENT ROW
+    ) AS cumulative_revenue,
+    -- Rolling 7-day sales
+    SUM(revenue) OVER (
+        ORDER BY sales_date
+        ROWS BETWEEN 6 PRECEDING
+        AND CURRENT ROW
+    ) AS rolling_7_day_sales,
+    -- Rolling 30-day average
+    AVG(revenue) OVER (
+        ORDER BY sales_date
+        ROWS BETWEEN 29 PRECEDING
+        AND CURRENT ROW
+    ) AS rolling_30_day_avg,
+    -- Yesterday's revenue
+    LAG(revenue) OVER (
+        ORDER BY sales_date
+    ) AS previous_day_revenue,
+    -- Revenue change
+    revenue -
+    LAG(revenue) OVER (
+        ORDER BY sales_date
+    ) AS revenue_change
+FROM daily_sales
+ORDER BY sales_date;
+
