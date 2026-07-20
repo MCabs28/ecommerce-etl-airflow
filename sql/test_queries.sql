@@ -1078,3 +1078,77 @@ SELECT
 FROM daily_sales
 ORDER BY sales_date;
 
+--Example Union
+SELECT
+    order_id,
+    customer_id,
+    total_amount
+FROM website_orders
+UNION
+SELECT
+    order_id,
+    customer_id,
+    total_amount
+FROM mobile_orders;
+
+--dbt example
+SELECT *
+FROM {{ ref('stg_shopify_orders') }}
+UNION ALL
+SELECT *
+FROM {{ ref('stg_magento_orders') }}
+
+--Intersect
+SELECT customer_id
+FROM website_customers
+INTERSECT
+SELECT customer_id
+FROM mobile_customers;
+
+--Except: Which customers did NOT get migrated?
+SELECT
+    customer_id
+FROM old_customers
+EXCEPT
+SELECT
+    customer_id
+FROM new_customers;
+
+
+
+
+--VIEW
+CREATE VIEW customer_orders AS
+SELECT
+    customer_id,
+    order_date,
+    total_amount
+FROM orders;
+SELECT * FROM customer_orders;
+
+--Materialized View
+CREATE MATERIALIZED VIEW daily_sales_summary AS
+	SELECT
+	    DATE(order_date) AS sales_date,
+	    SUM(total_amount) AS revenue
+	FROM orders
+	GROUP BY DATE(order_date);
+	SELECT * FROM daily_sales_summary;
+--Refresh Materialized View
+REFRESH MATERIALIZED VIEW daily_sales_summary;
+
+--INDEX EXAMPLE
+SELECT *
+FROM products
+WHERE category = 'Electronics';
+CREATE INDEX idx_products_category ON products(category);
+
+--UPSERT
+INSERT INTO customers (customer_id, name)
+VALUES
+    (2, 'John Smith'),
+    (3, 'Alice')
+ON CONFLICT (customer_id)
+DO UPDATE
+SET name = EXCLUDED.name;
+
