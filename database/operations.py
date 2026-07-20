@@ -1,6 +1,10 @@
+import logging
+
 from sqlalchemy import text
 
 from database.connection import get_engine
+
+logger = logging.getLogger(__name__)
 
 
 def truncate_table(table_name: str):
@@ -14,4 +18,4 @@ def truncate_table(table_name: str):
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE TABLE {table_name} RESTART IDENTITY CASCADE;"))
 
-    print(f"Truncated {table_name}")
+    logger.info(f"Truncated table: {table_name}")

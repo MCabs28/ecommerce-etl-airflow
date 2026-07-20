@@ -1,8 +1,13 @@
+import logging
+
 from database.connection import get_engine
 from database.operations import truncate_table
 
+logger = logging.getLogger(__name__)
+
 
 def load_customers(df):
+
     engine = get_engine()
 
     truncate_table("analytics_customers")
@@ -14,4 +19,4 @@ def load_customers(df):
         index=False,
     )
 
-    print(f"Loaded {len(df)} customers.")
+    logger.info(f"Loaded {len(df)} customers into analytics_customers")
