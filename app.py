@@ -2,10 +2,12 @@ import logging
 
 from utils.logger import configure_logging
 
-from pipelines.customers import customers_pipeline
-from pipelines.products import products_pipeline
-from pipelines.orders import orders_pipeline
-from pipelines.order_items import order_items_pipeline
+from pipelines import (
+    customers_pipeline,
+    products_pipeline,
+    orders_pipeline,
+    order_items_pipeline,
+)
 
 # Configure logging once when the application starts
 configure_logging()
